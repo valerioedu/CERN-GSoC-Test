@@ -238,54 +238,72 @@ int main() {
     // Create arrays for different distributions
     std::cout << "Generating data from three different distributions...\n";
     
+    int num_points = int(domain / dx);
+    int num_params = int((cmax - cmin) / dc) + 1; // Number of parameters (means, ranges, lambdas)
+    
     float** gaussian_data = gaussian_data_generator();
     float** uniform_data = uniform_data_generator();
     float** exponential_data = exponential_data_generator();
     
     // --- PART 2: COMPRESSION IMPLEMENTATION ---
+    // Create flattened arrays for easier processing
+    float* flat_gaussian = new float[num_params * num_points];
+    float* flat_uniform = new float[num_params * num_points];
+    float* flat_exponential = new float[num_params * num_points];
+    
+    // Flatten the 2D arrays
+    for (int j = 0; j < num_params; j++) {
+        for (int i = 0; i < num_points; i++) {
+            int flat_idx = j * num_points + i;
+            flat_gaussian[flat_idx] = gaussian_data[j][i];
+            flat_uniform[flat_idx] = uniform_data[j][i];
+            flat_exponential[flat_idx] = exponential_data[j][i];
+        }
+    }
+    
     // Create arrays for compressed data
-    float* gaussian_compressed_8bit = new float[int(domain / dx)];
-    float* gaussian_compressed_16bit = new float[int(domain / dx)];
+    float* gaussian_compressed_8bit = new float[num_params * num_points];
+    float* gaussian_compressed_16bit = new float[num_params * num_points];
     
-    float* uniform_compressed_8bit = new float[int(domain / dx)];
-    float* uniform_compressed_16bit = new float[int(domain / dx)];
+    float* uniform_compressed_8bit = new float[num_params * num_points];
+    float* uniform_compressed_16bit = new float[num_params * num_points];
     
-    float* exponential_compressed_8bit = new float[int(domain / dx)];
-    float* exponential_compressed_16bit = new float[int(domain / dx)];
+    float* exponential_compressed_8bit = new float[num_params * num_points];
+    float* exponential_compressed_16bit = new float[num_params * num_points];
     
     // Apply compression
     std::cout << "Applying different compression levels...\n";
-    for (int i = 0; i < int(domain / dx); i++) {
+    for (int i = 0; i < num_params * num_points; i++) {
         // Gaussian compression
-        gaussian_compressed_8bit[i] = compressFloat(gaussian_data[i], 8);
-        gaussian_compressed_16bit[i] = compressFloat(gaussian_data[i], 16);
+        gaussian_compressed_8bit[i] = compressFloat(flat_gaussian[i], 8);
+        gaussian_compressed_16bit[i] = compressFloat(flat_gaussian[i], 16);
         
         // Uniform compression
-        uniform_compressed_8bit[i] = compressFloat(uniform_data[i], 8);
-        uniform_compressed_16bit[i] = compressFloat(uniform_data[i], 16);
+        uniform_compressed_8bit[i] = compressFloat(flat_uniform[i], 8);
+        uniform_compressed_16bit[i] = compressFloat(flat_uniform[i], 16);
         
         // Exponential compression
-        exponential_compressed_8bit[i] = compressFloat(exponential_data[i], 8);
-        exponential_compressed_16bit[i] = compressFloat(exponential_data[i], 16);
+        exponential_compressed_8bit[i] = compressFloat(flat_exponential[i], 8);
+        exponential_compressed_16bit[i] = compressFloat(flat_exponential[i], 16);
     }
     
     // --- PART 3: FILE I/O AND SIZE COMPARISON ---
     std::cout << "Saving data to binary files and comparing sizes...\n";
     
     // Save original data
-    SaveToBinaryFile("uncompressed_gaussian.bin", gaussian_data, sizeof(float) * int(domain / dx));
-    SaveToBinaryFile("uncompressed_uniform.bin", uniform_data, sizeof(float) * int(domain / dx));
-    SaveToBinaryFile("uncompressed_exponential.bin", exponential_data, sizeof(float) * int(domain / dx));
+    SaveToBinaryFile("uncompressed_gaussian.bin", flat_gaussian, sizeof(float) * num_params * num_points);
+    SaveToBinaryFile("uncompressed_uniform.bin", flat_uniform, sizeof(float) * num_params * num_points);
+    SaveToBinaryFile("uncompressed_exponential.bin", flat_exponential, sizeof(float) * num_params * num_points);
     
     // Compress and save with actual storage reduction
-    auto compressed_gaussian_8bit = compressFloatArray(gaussian_data, int(domain / dx), 8);
-    auto compressed_gaussian_16bit = compressFloatArray(gaussian_data, int(domain / dx), 16);
+    auto compressed_gaussian_8bit = compressFloatArray(flat_gaussian, num_params * num_points, 8);
+    auto compressed_gaussian_16bit = compressFloatArray(flat_gaussian, num_params * num_points, 16);
 
-    auto compressed_uniform_8bit = compressFloatArray(uniform_data, int(domain / dx), 8);
-    auto compressed_uniform_16bit = compressFloatArray(uniform_data, int(domain / dx), 16);
+    auto compressed_uniform_8bit = compressFloatArray(flat_uniform, num_params * num_points, 8);
+    auto compressed_uniform_16bit = compressFloatArray(flat_uniform, num_params * num_points, 16);
 
-    auto compressed_exp_8bit = compressFloatArray(exponential_data, int(domain / dx), 8);
-    auto compressed_exp_16bit = compressFloatArray(exponential_data, int(domain / dx), 16);
+    auto compressed_exp_8bit = compressFloatArray(flat_exponential, num_params * num_points, 8);
+    auto compressed_exp_16bit = compressFloatArray(flat_exponential, num_params * num_points, 16);
 
     // Save the truly compressed data
     SaveCompressedToBinaryFile("gaussian_8bit_compressed.bin", compressed_gaussian_8bit);
@@ -299,22 +317,21 @@ int main() {
 
     // Compare file sizes
     std::cout << "File sizes comparison:\n";
-    std::cout << "Original data (each distribution): " << sizeof(float) * int(domain / dx) << " bytes\n";
+    std::cout << "Original data (each distribution): " << sizeof(float) * num_params * num_points << " bytes\n";
     std::cout << "8-bit compressed gaussian: " << compressed_gaussian_8bit.size() << " bytes (" 
-              << (100.0 * compressed_gaussian_8bit.size() / (sizeof(float) * int(domain / dx))) << "% of original)\n";
+              << (100.0 * compressed_gaussian_8bit.size() / (sizeof(float) * num_params * num_points)) << "% of original)\n";
     std::cout << "16-bit compressed gaussian: " << compressed_gaussian_16bit.size() << " bytes (" 
-              << (100.0 * compressed_gaussian_16bit.size() / (sizeof(float) * int(domain / dx))) << "% of original)\n";
+              << (100.0 * compressed_gaussian_16bit.size() / (sizeof(float) * num_params * num_points)) << "% of original)\n";
 
-    // If you need to test decompression, add this:
     // Test decompression to verify data integrity
-    float* test_decomp = new float[int(domain / dx)];
-    decompressToFloatArray(compressed_gaussian_8bit, test_decomp, int(domain / dx), 8);
+    float* test_decomp = new float[num_params * num_points];
+    decompressToFloatArray(compressed_gaussian_8bit, test_decomp, num_params * num_points, 8);
 
     // Verify some values match the compressed version
     std::cout << "\nVerifying decompression - first 5 values:\n";
     std::cout << "Original\tCompressed\tDecompressed\n";
     for (int i = 0; i < 5; i++) {
-        std::cout << gaussian_data[i] << "\t" 
+        std::cout << flat_gaussian[i] << "\t" 
                   << gaussian_compressed_8bit[i] << "\t"
                   << test_decomp[i] << "\n";
     }
@@ -323,17 +340,17 @@ int main() {
     std::cout << "\n=== STATISTICAL ANALYSIS ===\n";
     
     // Gaussian statistics
-    double gaussian_orig_mean = mean(gaussian_data, int(domain / dx));
-    double gaussian_8bit_mean = mean(gaussian_compressed_8bit, int(domain / dx));
-    double gaussian_16bit_mean = mean(gaussian_compressed_16bit, int(domain / dx));
+    double gaussian_orig_mean = mean(flat_gaussian, num_params * num_points);
+    double gaussian_8bit_mean = mean(gaussian_compressed_8bit, num_params * num_points);
+    double gaussian_16bit_mean = mean(gaussian_compressed_16bit, num_params * num_points);
     
-    double gaussian_orig_var = variance(gaussian_data, int(domain / dx), gaussian_orig_mean);
-    double gaussian_8bit_var = variance(gaussian_compressed_8bit, int(domain / dx), gaussian_8bit_mean);
-    double gaussian_16bit_var = variance(gaussian_compressed_16bit, int(domain / dx), gaussian_16bit_mean);
+    double gaussian_orig_var = variance(flat_gaussian, num_params * num_points, gaussian_orig_mean);
+    double gaussian_8bit_var = variance(gaussian_compressed_8bit, num_params * num_points, gaussian_8bit_mean);
+    double gaussian_16bit_var = variance(gaussian_compressed_16bit, num_params * num_points, gaussian_16bit_mean);
 
-    double gaussian_orig_std = standardDeviation(gaussian_data, int(domain / dx), gaussian_orig_mean);
-    double gaussian_8bit_std = standardDeviation(gaussian_compressed_8bit, int(domain / dx), gaussian_8bit_mean);
-    double gaussian_16bit_std = standardDeviation(gaussian_compressed_16bit, int(domain / dx), gaussian_16bit_mean);
+    double gaussian_orig_std = standardDeviation(flat_gaussian, num_params * num_points, gaussian_orig_mean);
+    double gaussian_8bit_std = standardDeviation(gaussian_compressed_8bit, num_params * num_points, gaussian_8bit_mean);
+    double gaussian_16bit_std = standardDeviation(gaussian_compressed_16bit, num_params * num_points, gaussian_16bit_mean);
     
     std::cout << "Gaussian Distribution Statistics:\n";
     std::cout << "Original   - Mean: " << gaussian_orig_mean << " Variance: " << gaussian_orig_var << " Standard Deviation: " << gaussian_orig_std << "\n";
@@ -341,35 +358,35 @@ int main() {
     std::cout << "16-bit comp - Mean: " << gaussian_16bit_mean << " Variance: " << gaussian_16bit_var << " Standard Deviation: " << gaussian_16bit_std << "\n\n";
     
     // Uniform statistics 
-    double uniform_orig_mean = mean(uniform_data, int(domain / dx));
-    double uniform_8bit_mean = mean(uniform_compressed_8bit, int(domain / dx));
-    double uniform_16bit_mean = mean(uniform_compressed_16bit, int(domain / dx));
+    double uniform_orig_mean = mean(flat_uniform, num_params * num_points);
+    double uniform_8bit_mean = mean(uniform_compressed_8bit, num_params * num_points);
+    double uniform_16bit_mean = mean(uniform_compressed_16bit, num_params * num_points);
     
-    double uniform_orig_var = variance(uniform_data, int(domain / dx), uniform_orig_mean);
-    double uniform_8bit_var = variance(uniform_compressed_8bit, int(domain / dx), uniform_8bit_mean);
-    double uniform_16bit_var = variance(uniform_compressed_16bit, int(domain / dx), uniform_16bit_mean);
+    double uniform_orig_var = variance(flat_uniform, num_params * num_points, uniform_orig_mean);
+    double uniform_8bit_var = variance(uniform_compressed_8bit, num_params * num_points, uniform_8bit_mean);
+    double uniform_16bit_var = variance(uniform_compressed_16bit, num_params * num_points, uniform_16bit_mean);
 
-    double uniform_orig_std = standardDeviation(uniform_data, int(domain / dx), uniform_orig_mean);
-    double uniform_8bit_std = standardDeviation(uniform_compressed_8bit, int(domain / dx), uniform_8bit_mean);
-    double uniform_16bit_std = standardDeviation(uniform_compressed_16bit, int(domain / dx), uniform_16bit_mean);
+    double uniform_orig_std = standardDeviation(flat_uniform, num_params * num_points, uniform_orig_mean);
+    double uniform_8bit_std = standardDeviation(uniform_compressed_8bit, num_params * num_points, uniform_8bit_mean);
+    double uniform_16bit_std = standardDeviation(uniform_compressed_16bit, num_params * num_points, uniform_16bit_mean);
     
-    std::cout << "uniform Distribution Statistics:\n";
+    std::cout << "Uniform Distribution Statistics:\n";
     std::cout << "Original   - Mean: " << uniform_orig_mean << " Variance: " << uniform_orig_var << " Standard Deviation: "<< uniform_orig_std << "\n";
     std::cout << "8-bit comp - Mean: " << uniform_8bit_mean << " Variance: " << uniform_8bit_var << " Standard Deviation: "<< uniform_8bit_std << "\n";
     std::cout << "16-bit comp - Mean: " << uniform_16bit_mean << " Variance: " << uniform_16bit_var << " Standard Deviation: "<< uniform_16bit_std << "\n\n";
     
     // Exponential statistics
-    double exp_orig_mean = mean(exponential_data, int(domain / dx));
-    double exp_8bit_mean = mean(exponential_compressed_8bit, int(domain / dx));
-    double exp_16bit_mean = mean(exponential_compressed_16bit, int(domain / dx));
+    double exp_orig_mean = mean(flat_exponential, num_params * num_points);
+    double exp_8bit_mean = mean(exponential_compressed_8bit, num_params * num_points);
+    double exp_16bit_mean = mean(exponential_compressed_16bit, num_params * num_points);
     
-    double exp_orig_var = variance(exponential_data, int(domain / dx), exp_orig_mean);
-    double exp_8bit_var = variance(exponential_compressed_8bit, int(domain / dx), exp_8bit_mean);
-    double exp_16bit_var = variance(exponential_compressed_16bit, int(domain / dx), exp_16bit_mean);
+    double exp_orig_var = variance(flat_exponential, num_params * num_points, exp_orig_mean);
+    double exp_8bit_var = variance(exponential_compressed_8bit, num_params * num_points, exp_8bit_mean);
+    double exp_16bit_var = variance(exponential_compressed_16bit, num_params * num_points, exp_16bit_mean);
 
-    double exp_orig_std = standardDeviation(exponential_data, int(domain / dx), exp_orig_mean);
-    double exp_8bit_std = standardDeviation(exponential_compressed_8bit, int(domain / dx), exp_8bit_mean);
-    double exp_16bit_std = standardDeviation(exponential_compressed_16bit, int(domain / dx), exp_16bit_mean);
+    double exp_orig_std = standardDeviation(flat_exponential, num_params * num_points, exp_orig_mean);
+    double exp_8bit_std = standardDeviation(exponential_compressed_8bit, num_params * num_points, exp_8bit_mean);
+    double exp_16bit_std = standardDeviation(exponential_compressed_16bit, num_params * num_points, exp_16bit_mean);
     
     std::cout << "Exponential Distribution Statistics:\n";
     std::cout << "Original   - Mean: " << exp_orig_mean << " Variance: " << exp_orig_var << " Standard Deviation: " << exp_orig_std << "\n";
@@ -389,10 +406,10 @@ int main() {
     double max_err_uniform_8bit = 0.0, max_err_uniform_16bit = 0.0;
     double max_err_exp_8bit = 0.0, max_err_exp_16bit = 0.0;
     
-    for (int i = 0; i < int(domain / dx); i++) {
+    for (int i = 0; i < num_params * num_points; i++) {
         // Gaussian errors
-        double err_gaussian_8bit = fabs(gaussian_data[i] - gaussian_compressed_8bit[i]);
-        double err_gaussian_16bit = fabs(gaussian_data[i] - gaussian_compressed_16bit[i]);
+        double err_gaussian_8bit = fabs(flat_gaussian[i] - gaussian_compressed_8bit[i]);
+        double err_gaussian_16bit = fabs(flat_gaussian[i] - gaussian_compressed_16bit[i]);
         
         mse_gaussian_8bit += err_gaussian_8bit * err_gaussian_8bit;
         mse_gaussian_16bit += err_gaussian_16bit * err_gaussian_16bit;
@@ -401,8 +418,8 @@ int main() {
         max_err_gaussian_16bit = std::max(max_err_gaussian_16bit, err_gaussian_16bit);
         
         // Uniform errors
-        double err_uniform_8bit = fabs(uniform_data[i] - uniform_compressed_8bit[i]);
-        double err_uniform_16bit = fabs(uniform_data[i] - uniform_compressed_16bit[i]);
+        double err_uniform_8bit = fabs(flat_uniform[i] - uniform_compressed_8bit[i]);
+        double err_uniform_16bit = fabs(flat_uniform[i] - uniform_compressed_16bit[i]);
         
         mse_uniform_8bit += err_uniform_8bit * err_uniform_8bit;
         mse_uniform_16bit += err_uniform_16bit * err_uniform_16bit;
@@ -411,8 +428,8 @@ int main() {
         max_err_uniform_16bit = std::max(max_err_uniform_16bit, err_uniform_16bit);
         
         // Exponential errors
-        double err_exp_8bit = fabs(exponential_data[i] - exponential_compressed_8bit[i]);
-        double err_exp_16bit = fabs(exponential_data[i] - exponential_compressed_16bit[i]);
+        double err_exp_8bit = fabs(flat_exponential[i] - exponential_compressed_8bit[i]);
+        double err_exp_16bit = fabs(flat_exponential[i] - exponential_compressed_16bit[i]);
         
         mse_exp_8bit += err_exp_8bit * err_exp_8bit;
         mse_exp_16bit += err_exp_16bit * err_exp_16bit;
@@ -421,24 +438,22 @@ int main() {
         max_err_exp_16bit = std::max(max_err_exp_16bit, err_exp_16bit);
     }
     
-    int numPoints = int(domain / dx);
+    // Normalize MSE values
+    mse_gaussian_8bit /= (num_params * num_points);
+    mse_gaussian_16bit /= (num_params * num_points);
     
-    // uniformize MSE values
-    mse_gaussian_8bit /= numPoints;
-    mse_gaussian_16bit /= numPoints;
+    mse_uniform_8bit /= (num_params * num_points);
+    mse_uniform_16bit /= (num_params * num_points);
     
-    mse_uniform_8bit /= numPoints;
-    mse_uniform_16bit /= numPoints;
-    
-    mse_exp_8bit /= numPoints;
-    mse_exp_16bit /= numPoints;
+    mse_exp_8bit /= (num_params * num_points);
+    mse_exp_16bit /= (num_params * num_points);
     
     // Display error metrics
     std::cout << "Gaussian Distribution Error Metrics:\n";
     std::cout << "8-bit  - MSE: " << mse_gaussian_8bit << " Max Error: " << max_err_gaussian_8bit << "\n";
     std::cout << "16-bit - MSE: " << mse_gaussian_16bit << " Max Error: " << max_err_gaussian_16bit << "\n\n";
     
-    std::cout << "uniform Distribution Error Metrics:\n";
+    std::cout << "Uniform Distribution Error Metrics:\n";
     std::cout << "8-bit  - MSE: " << mse_uniform_8bit << " Max Error: " << max_err_uniform_8bit << "\n";
     std::cout << "16-bit - MSE: " << mse_uniform_16bit << " Max Error: " << max_err_uniform_16bit << "\n\n";
     
@@ -448,18 +463,57 @@ int main() {
     
     // --- PART 6: EXPORT DATA FOR PLOTTING ---
     std::cout << "Exporting data for plotting...\n";
+
+    // Find the parameter index where parameter ≈ 1
+    int target_param_idx = 0;
+    double closest_distance = std::numeric_limits<double>::max();
+
+    for (int j = 0; j < num_params; j++) {
+        double param_value = cmin + j * dc;
+        double distance = std::abs(param_value - 1.0);
         
-    ExportForPlotting("gaussian_original.csv", gaussian_data, int(domain / dx));
-    ExportForPlotting("gaussian_8bit.csv", gaussian_compressed_8bit, int(domain / dx));
-    ExportForPlotting("gaussian_16bit.csv", gaussian_compressed_16bit, int(domain / dx));
+        if (distance < closest_distance) {
+            closest_distance = distance;
+            target_param_idx = j;
+        }
+    }
 
-    ExportForPlotting("uniform_original.csv", uniform_data, int(domain / dx));
-    ExportForPlotting("uniform_8bit.csv", uniform_compressed_8bit, int(domain / dx));
-    ExportForPlotting("uniform_16bit.csv", uniform_compressed_16bit, int(domain / dx));
+    std::cout << "Using parameter set with value closest to 1.0: " 
+            << (cmin + target_param_idx * dc) << " (index " << target_param_idx << ")\n";
 
-    ExportForPlotting("exponential_original.csv", exponential_data, int(domain / dx));
-    ExportForPlotting("exponential_8bit.csv", exponential_compressed_8bit, int(domain / dx));
-    ExportForPlotting("exponential_16bit.csv", exponential_compressed_16bit, int(domain / dx));
+    // Export original data for the selected parameter
+    ExportForPlotting("gaussian_original.csv", gaussian_data[target_param_idx], num_points);
+    ExportForPlotting("uniform_original.csv", uniform_data[target_param_idx], num_points);
+    ExportForPlotting("exponential_original.csv", exponential_data[target_param_idx], num_points);
+
+    // Create compressed data arrays for the selected parameter set
+    float* first_gaussian_8bit = new float[num_points];
+    float* first_gaussian_16bit = new float[num_points];
+    float* first_uniform_8bit = new float[num_points];
+    float* first_uniform_16bit = new float[num_points];
+    float* first_exp_8bit = new float[num_points];
+    float* first_exp_16bit = new float[num_points];
+
+    // Extract selected parameter set data from flattened arrays
+    for (int i = 0; i < num_points; i++) {
+        // Calculate the position in the flattened array for the selected parameter set
+        int flat_idx = target_param_idx * num_points + i;
+    
+        first_gaussian_8bit[i] = gaussian_compressed_8bit[flat_idx];
+        first_gaussian_16bit[i] = gaussian_compressed_16bit[flat_idx];
+        first_uniform_8bit[i] = uniform_compressed_8bit[flat_idx];
+        first_uniform_16bit[i] = uniform_compressed_16bit[flat_idx];
+        first_exp_8bit[i] = exponential_compressed_8bit[flat_idx];
+        first_exp_16bit[i] = exponential_compressed_16bit[flat_idx];
+    }
+    
+    // Export compressed first parameter set data for plotting
+    ExportForPlotting("gaussian_8bit.csv", first_gaussian_8bit, num_points);
+    ExportForPlotting("gaussian_16bit.csv", first_gaussian_16bit, num_points);
+    ExportForPlotting("uniform_8bit.csv", first_uniform_8bit, num_points);
+    ExportForPlotting("uniform_16bit.csv", first_uniform_16bit, num_points);
+    ExportForPlotting("exponential_8bit.csv", first_exp_8bit, num_points);
+    ExportForPlotting("exponential_16bit.csv", first_exp_16bit, num_points);
     
     // --- PART 7: CONCLUSIONS ---
     std::cout << "\n=== COMPRESSION RECOMMENDATIONS ===\n";
@@ -477,9 +531,18 @@ int main() {
     std::cout << "  even with aggressive compression\n";
     
     // Clean up
+    for (int j = 0; j < num_params; j++) {
+        delete[] gaussian_data[j];
+        delete[] uniform_data[j];
+        delete[] exponential_data[j];
+    }
     delete[] gaussian_data;
     delete[] uniform_data;
     delete[] exponential_data;
+    
+    delete[] flat_gaussian;
+    delete[] flat_uniform;
+    delete[] flat_exponential;
     delete[] gaussian_compressed_8bit;
     delete[] gaussian_compressed_16bit;
     delete[] uniform_compressed_8bit;
@@ -487,6 +550,13 @@ int main() {
     delete[] exponential_compressed_8bit;
     delete[] exponential_compressed_16bit;
     delete[] test_decomp;
+    
+    delete[] first_gaussian_8bit;
+    delete[] first_gaussian_16bit;
+    delete[] first_uniform_8bit;
+    delete[] first_uniform_16bit;
+    delete[] first_exp_8bit;
+    delete[] first_exp_16bit;
     
     // Call the Python plotting script
     std::cout << "\n=== GENERATING VISUALIZATIONS ===\n";
