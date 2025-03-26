@@ -516,13 +516,13 @@ int main() {
     std::cout << "Based on the error analysis:\n";
     
     // Simple recommendation logic
-    if (mse_gaussian_8bit < 1e-6 && mse_uniform_8bit < 1e-6 && mse_exp_8bit < 1e-6) {
-        std::cout << "- 8-bit compression is suitable for most applications with minimal loss of precision\n";
+    if (mse_gaussian_16bit < 1e-6 && mse_uniform_16bit < 1e-6 && mse_exp_16bit < 1e-6) {
+        std::cout << "- 16-bit compression is suitable for most applications with minimal loss of precision\n";
     } else {
-        std::cout << "- For high-precision requirements, use 16-bit compression or no compression at all\n";
+        std::cout << "- For high-precision requirements, use 8-bit compression or no compression at all\n";
     }
     
-    std::cout << "- For applications with strict error tolerances, consider the max error values\n";
+    std::cout << "- For applications with strict error tolerances are considered the max error values\n";
     std::cout << "- Statistical parameters show minimal changes in distribution characteristics\n";
     std::cout << "  even with aggressive compression\n";
     
