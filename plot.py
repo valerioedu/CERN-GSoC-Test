@@ -55,62 +55,6 @@ def plot_distribution_comparison(dist_name):
     plt.savefig(f'{dist_name}_comparison.png', dpi=300)
     plt.close()
 
-def plot_error_comparison():
-    """Plot error metrics across distributions and compression levels"""
-    distributions = ['gaussian', 'uniform', 'exponential']
-    compression_levels = ['8bit', '12bit', '16bit']
-    
-    # Sample data - replace with actual error metrics from your output
-    # You could extract these from the binary files or hardcode from the console output
-    mse_data = {
-        'gaussian': [1e-7, 1e-6, 1e-5],  # MSE for 8bit, 12bit, 16bit
-        'uniform': [1.5e-7, 1.5e-6, 1.5e-5],
-        'exponential': [2e-7, 2e-6, 2e-5]
-    }
-    
-    max_error_data = {
-        'gaussian': [0.0001, 0.001, 0.01],  # Max errors for 8bit, 12bit, 16bit
-        'uniform': [0.00015, 0.0015, 0.015],
-        'exponential': [0.0002, 0.002, 0.02]
-    }
-    
-    # Prepare bar chart data
-    plt.figure(figsize=(14, 10))
-    
-    # MSE comparison
-    plt.subplot(2, 1, 1)
-    x = np.arange(len(distributions))
-    width = 0.25
-    
-    plt.bar(x - width, [mse_data[d][0] for d in distributions], width, label='8-bit')
-    plt.bar(x, [mse_data[d][1] for d in distributions], width, label='12-bit')
-    plt.bar(x + width, [mse_data[d][2] for d in distributions], width, label='16-bit')
-    
-    plt.yscale('log')  # Use log scale for better visibility of differences
-    plt.title('Mean Squared Error by Distribution and Compression Level')
-    plt.xticks(x, distributions)
-    plt.ylabel('Mean Squared Error (log scale)')
-    plt.legend()
-    plt.grid(True, axis='y', alpha=0.3)
-    
-    # Max Error comparison
-    plt.subplot(2, 1, 2)
-    
-    plt.bar(x - width, [max_error_data[d][0] for d in distributions], width, label='8-bit')
-    plt.bar(x, [max_error_data[d][1] for d in distributions], width, label='12-bit')
-    plt.bar(x + width, [max_error_data[d][2] for d in distributions], width, label='16-bit')
-    
-    plt.yscale('log')  # Use log scale for better visibility of differences
-    plt.title('Maximum Error by Distribution and Compression Level')
-    plt.xticks(x, distributions)
-    plt.ylabel('Maximum Error (log scale)')
-    plt.legend()
-    plt.grid(True, axis='y', alpha=0.3)
-    
-    plt.tight_layout()
-    plt.savefig('error_comparison.png', dpi=300)
-    plt.close()
-
 def plot_bit_pattern_example():
     """Visualize the bit patterns of a float value and its compressed versions"""
     # Original value and compressed versions for demonstration
@@ -170,7 +114,7 @@ def plot_bit_pattern_example():
     plt.xlim(-5, 40)
     plt.ylim(0.5, 4.5)
     plt.axis('off')
-    plt.title('Bit Pattern Visualization: Float Value Compression')
+    plt.title('Bit Pattern Visualization: Float Value Compression', x=0.42)
     
     plt.tight_layout()
     plt.savefig('bit_pattern.png', dpi=300)
@@ -182,10 +126,7 @@ if __name__ == "__main__":
     # Plot distribution comparisons
     for dist in ['gaussian', 'uniform', 'exponential']:
         plot_distribution_comparison(dist)
-    
-    # Plot error metrics comparison
-    plot_error_comparison()
-    
+        
     # Plot bit pattern example
     plot_bit_pattern_example()
     
