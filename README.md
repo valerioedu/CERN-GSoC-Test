@@ -1,6 +1,4 @@
-# Save the final README.md content to a file for download
-
-readme_content = """# Lossy Floating-Point Compression: Warm-Up Exercise
+# Lossy Floating-Point Compression: Warm-Up Exercise
 
 This repository demonstrates a **lossy floating-point compression** technique by zeroing out a configurable number of least significant bits in the mantissa. We use three different distributions—**Gaussian**, **Uniform**, and **Exponential**—to generate test data and evaluate the compression’s effect on file sizes and statistical properties.
 
