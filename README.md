@@ -119,11 +119,11 @@ This project demonstrates that bit-level mantissa truncation can:
 - Consider the specific distribution characteristics when selecting compression levels
 
 #### 🖼️ Images
-![Bit Pattern Visualization](bit_pattern.png)
-![Exponential Comparison](exponential_comparison.png)
-![Exponential Errors](exponential_error.png)
-![Gaussian Comparison](gaussian_comparison.png)
-![Gaussian Errors](gaussian_error.png)
-![Uniform Comparison](uniform_comparison.png)
-![Uniform Errors](uniform_error.png)
-![Binary Files sizes](file_size_comparison.png)
+![Bit Pattern Visualization](images/bit_pattern.png)
+![Exponential Comparison](images/exponential_comparison.png)
+![Exponential Errors](images/exponential_error.png)
+![Gaussian Comparison](images/gaussian_comparison.png)
+![Gaussian Errors](images/gaussian_error.png)
+![Uniform Comparison](images/uniform_comparison.png)
+![Uniform Errors](images/uniform_error.png)
+![Binary Files sizes](images/file_size_comparison.png)
