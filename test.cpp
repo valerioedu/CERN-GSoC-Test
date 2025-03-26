@@ -1,11 +1,13 @@
 /*
-    * I'm gonna test on both float and double
+    * I'm gonna test on floats so 1 bit sign, 8 bits exponent and 23 bits mantissa
     *
-    * I'm also gonna test compression on the original primitive types and structs
+    * I'm also gonna test compression and decompression, to test the compression success
     * 
     * Final tests will be done with both 8 and 16 bits
     * 
     * Tests will be done on Gaussian, uniform and exponential distributions
+    * 
+    * To spare computational complexity I won't loop through 2 parameters I'll equal them
 */
 
 
@@ -18,17 +20,20 @@
 #include <vector>
 
 #define dx 0.001   
-#define domain 2
+#define domain 5
 #define dc 0.5
-#define cmin -2.5
-#define cmax 2.5
+#define cmin 0
+#define cmax 5
 
 /*
-*    To work with the bits of the floating number I will copy them to a uint32\uint64 
+*    To work with the bits of the floating number I will copy them to a uint32 
 */
 
 //compressed bits should be 8 or 16
-float compressFloat(float f, int compressedbits) {           
+float compressFloat(float f, int compressedbits) { 
+    if (std::isnan(f) || std::isinf(f)) {
+        return f;
+    }          
     uint32_t bits;        
 
     //copying the bits of the float into the uint32
@@ -40,15 +45,6 @@ float compressFloat(float f, int compressedbits) {
 
     //copying the bits back to a float
     memcpy(&compressed, &bits, sizeof(float)); 
-    return compressed;
-}
-
-double compressDouble(double d, int compressedbits) {
-    uint64_t bits;
-    memcpy(&bits, &d, sizeof(double));
-    bits &= ~((1 << compressedbits) - 1);
-    double compressed;
-    memcpy(&compressed, &bits, sizeof(double));
     return compressed;
 }
 
@@ -108,16 +104,19 @@ std::vector<uint8_t> compressFloatArray(float* data, int size, int compressBits)
     int bytesPerValue = (32 - compressBits) / 8;
     if ((32 - compressBits) % 8 != 0) bytesPerValue++; // Round up
     
-    // Create a buffer to hold the compressed data
     std::vector<uint8_t> compressedData(size * bytesPerValue);
     
     for (int i = 0; i < size; i++) {
-        // Get the bits for this float
         uint32_t bits;
         memcpy(&bits, &data[i], sizeof(float));
         
-        // Zero out the least significant bits as before
-        bits &= ~((1 << compressBits) - 1);
+        // Check for NaN or Inf values
+        bool isSpecial = std::isnan(data[i]) || std::isinf(data[i]);
+        
+        if (!isSpecial) {
+            // Zero out the least significant bits as before
+            bits &= ~((1 << compressBits) - 1);
+        }
         
         // Copy only the remaining significant bytes to the output buffer
         for (int b = 0; b < bytesPerValue; b++) {
@@ -134,24 +133,24 @@ std::vector<uint8_t> compressFloatArray(float* data, int size, int compressBits)
 
 // Function to decompress data back to float array
 void decompressToFloatArray(const std::vector<uint8_t>& compressedData, 
-                           float* outputArray, int size, int compressBits) {
+    float* outputArray, int size, int compressBits) {
     // Calculate how many bytes per value are in the compressed data
     int bytesPerValue = (32 - compressBits) / 8;
     if ((32 - compressBits) % 8 != 0) bytesPerValue++;
-    
+
     for (int i = 0; i < size; i++) {
         // Start with all zeroes
         uint32_t bits = 0;
-        
+
         // Reconstruct the value from the compressed bytes
         for (int b = 0; b < bytesPerValue; b++) {
             int bytePosition = b + (4 - bytesPerValue);
             if (bytePosition >= 0 && bytePosition < 4) {
                 bits |= static_cast<uint32_t>(compressedData[i * bytesPerValue + b]) 
-                      << (bytePosition * 8);
+                    << (bytePosition * 8);
             }
         }
-        
+
         // Convert back to float
         memcpy(&outputArray[i], &bits, sizeof(float));
     }
@@ -179,7 +178,7 @@ float** gaussian_data_generator() {
     }
     
     for (int j = 0; j < num_means; j++) {
-        double mean = cmin + j * dc;
+        double mean = 0.5 + j * dc;         // to avoid division by zero/zero variance
         for (int i = 0; i < num_points; i++) {
             double x = i * dx;
             gaussian_data[j][i] = gaussian(x, mean, mean); // Using mean as variance too
@@ -221,7 +220,7 @@ float** exponential_data_generator() {
     }
     
     for (int j = 0; j < num_lambdas; j++) {
-        double lambda = cmin + j * dc;
+        double lambda = 0.5 + j * dc;       // to make it converge to 1
         for (int i = 0; i < num_points; i++) {
             double x = i * dx;
             exponential_data[j][i] = exponential(x, lambda);
@@ -328,12 +327,19 @@ int main() {
     decompressToFloatArray(compressed_gaussian_8bit, test_decomp, num_params * num_points, 8);
 
     // Verify some values match the compressed version
-    std::cout << "\nVerifying decompression - first 5 values:\n";
+    std::cout << "\nVerifying decompression on 8 bit compressed Gaussian (parameter = 0) - first 5 values:\n";
     std::cout << "Original\tCompressed\tDecompressed\n";
+
+    // Sampled gaussian with mean = variance = 1
+    int sample_param_idx = 1; // Parameter = 0.5 + 1*0.5 = 1.0
+    int sample_offset = sample_param_idx * num_points;
+
     for (int i = 0; i < 5; i++) {
-        std::cout << flat_gaussian[i] << "\t" 
-                  << gaussian_compressed_8bit[i] << "\t"
-                  << test_decomp[i] << "\n";
+        int idx = sample_offset + i;
+        std::cout << std::fixed << std::setprecision(6)
+                << flat_gaussian[idx] << "\t" 
+                << gaussian_compressed_8bit[idx] << "\t"
+                << test_decomp[idx] << "\n";
     }
     
     // --- PART 4: STATISTICAL ANALYSIS ---
@@ -464,27 +470,15 @@ int main() {
     // --- PART 6: EXPORT DATA FOR PLOTTING ---
     std::cout << "Exporting data for plotting...\n";
 
-    // Find the parameter index where parameter ≈ 1
-    int target_param_idx = 0;
-    double closest_distance = std::numeric_limits<double>::max();
-
-    for (int j = 0; j < num_params; j++) {
-        double param_value = cmin + j * dc;
-        double distance = std::abs(param_value - 1.0);
-        
-        if (distance < closest_distance) {
-            closest_distance = distance;
-            target_param_idx = j;
-        }
-    }
-
-    std::cout << "Using parameter set with value closest to 1.0: " 
-            << (cmin + target_param_idx * dc) << " (index " << target_param_idx << ")\n";
+    // Define parameter indices (corresponding to parameter ≈ 1.0)
+    int gaussian_param_idx = 1;  // Parameter = 0.5 + 1*0.5 = 1.0
+    int uniform_param_idx = 0;   // Parameter = 0*0.5 = 0.0 (lower bound)
+    int exp_param_idx = 1;       // Parameter = 0.5 + 1*0.5 = 1.0 (lambda)
 
     // Export original data for the selected parameter
-    ExportForPlotting("gaussian_original.csv", gaussian_data[target_param_idx], num_points);
-    ExportForPlotting("uniform_original.csv", uniform_data[target_param_idx], num_points);
-    ExportForPlotting("exponential_original.csv", exponential_data[target_param_idx], num_points);
+    ExportForPlotting("gaussian_original.csv", gaussian_data[gaussian_param_idx], num_points);
+    ExportForPlotting("uniform_original.csv", uniform_data[uniform_param_idx], num_points);
+    ExportForPlotting("exponential_original.csv", exponential_data[exp_param_idx], num_points);
 
     // Create compressed data arrays for the selected parameter set
     float* first_gaussian_8bit = new float[num_points];
@@ -497,14 +491,16 @@ int main() {
     // Extract selected parameter set data from flattened arrays
     for (int i = 0; i < num_points; i++) {
         // Calculate the position in the flattened array for the selected parameter set
-        int flat_idx = target_param_idx * num_points + i;
-    
-        first_gaussian_8bit[i] = gaussian_compressed_8bit[flat_idx];
-        first_gaussian_16bit[i] = gaussian_compressed_16bit[flat_idx];
-        first_uniform_8bit[i] = uniform_compressed_8bit[flat_idx];
-        first_uniform_16bit[i] = uniform_compressed_16bit[flat_idx];
-        first_exp_8bit[i] = exponential_compressed_8bit[flat_idx];
-        first_exp_16bit[i] = exponential_compressed_16bit[flat_idx];
+        int gaussian_idx = gaussian_param_idx * num_points + i;
+        int uniform_idx = uniform_param_idx * num_points + i;
+        int exp_idx = exp_param_idx * num_points + i;
+        
+        first_gaussian_8bit[i] = gaussian_compressed_8bit[gaussian_idx];
+        first_gaussian_16bit[i] = gaussian_compressed_16bit[gaussian_idx];
+        first_uniform_8bit[i] = uniform_compressed_8bit[uniform_idx];
+        first_uniform_16bit[i] = uniform_compressed_16bit[uniform_idx];
+        first_exp_8bit[i] = exponential_compressed_8bit[exp_idx];
+        first_exp_16bit[i] = exponential_compressed_16bit[exp_idx];
     }
     
     // Export compressed first parameter set data for plotting
