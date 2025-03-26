@@ -71,14 +71,14 @@ This repository demonstrates a **lossy floating-point compression** technique by
 
 #### 🧪 Distribution Comparison Plots
 - **Gaussian**: 
-  - 8-bit compression preserves the overall shape well
-  - 16-bit compression shows almost no visible difference from original
+  - 16-bit compression preserves the overall shape well
+  - 8-bit compression shows almost no visible difference from original
   - Only minimal flattening of peak values in the most aggressive compression
 
 - **Exponential**: 
   - Both compression levels preserve the exponential decay curve
-  - 8-bit compression shows small deviations mainly in the steepest parts
-  - 16-bit compression results are nearly indistinguishable from original
+  - 16-bit compression shows small deviations mainly in the steepest parts
+  - 8-bit compression results are nearly indistinguishable from original
 
 - **Uniform**: 
   - No visible difference across compression levels
@@ -87,8 +87,8 @@ This repository demonstrates a **lossy floating-point compression** technique by
 
 #### 📈 Compression Error Plots
 - **Gaussian & Exponential**:
-  - 8-bit compression error is measurable but controlled
-  - 16-bit compression error is nearly imperceptible
+  - 16-bit compression error is measurable but controlled
+  - 8-bit compression error is nearly imperceptible
   - Errors are not randomly distributed but show structure related to value magnitude
 
 - **Uniform**:
@@ -101,8 +101,8 @@ This repository demonstrates a **lossy floating-point compression** technique by
 | Format | Size (% of original) |
 |--------|----------------------|
 | Original (32-bit) | 100% |
-| 16-bit Compressed | 75% |
-| 8-bit Compressed | 50% |
+| 8-bit Compressed | 75% |
+| 16-bit Compressed | 50% |
 
 #### 🧠 Conclusion
 
